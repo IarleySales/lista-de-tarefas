@@ -11,7 +11,18 @@ const app = express();
 
 app.use(express.json());
 
-app.use(express.static("public"));
+const path = require("path");
+
+// Define a pasta dos arquivos públicos.
+const publicPath = path.join(__dirname, "public");
+
+// Serve os arquivos estáticos.
+app.use(express.static(publicPath));
+
+// Abre o index.html ao acessar a rota principal.
+app.get("/", (req, res) => {
+    res.sendFile(path.join(publicPath, "index.html"));
+});
 
 // Verifica as variáveis de ambiente.
 const SUPABASE_URL = process.env.SUPABASE_URL;
