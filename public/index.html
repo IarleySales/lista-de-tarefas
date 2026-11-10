@@ -1,0 +1,353 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Minha Lista de Tarefas</title>
+
+    <style>
+        /* Configurações gerais */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f1f3f5;
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        /* Cartão principal */
+        .container {
+            max-width: 550px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px #00000012;
+        }
+
+        h1 {
+            text-align: center;
+            color: #222;
+        }
+
+        /* Formulário */
+        .formulario {
+            display: flex;
+            gap: 10px;
+            margin: 25px 0;
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        button {
+            padding: 11px 14px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .adicionar {
+            background: #2563eb;
+        }
+
+        /* Lista */
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .texto {
+            flex: 1;
+            overflow-wrap: anywhere;
+        }
+
+        .concluida {
+            color: #999;
+            text-decoration: line-through;
+        }
+
+        .concluir {
+            background: #16a34a;
+        }
+
+        .excluir {
+            background: #dc2626;
+        }
+
+        #mensagem {
+            color: #666;
+            text-align: center;
+        }
+
+        @media (max-width: 450px) {
+            .container {
+                padding: 20px;
+            }
+
+            .formulario {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="container">
+
+        <h1>Minha Lista de Tarefas</h1>
+
+        <!-- Campo para digitar uma nova tarefa -->
+        <div class="formulario">
+
+            <input
+                type="text"
+                id="novaTarefa"
+                placeholder="Digite uma tarefa..."
+            >
+
+            <button class="adicionar" onclick="adicionarTarefa()">
+                Adicionar
+            </button>
+
+        </div>
+
+        <!-- Mensagens de carregamento e erros -->
+        <p id="mensagem"></p>
+
+        <!-- Local onde as tarefas serão exibidas -->
+        <ul id="listaTarefas"></ul>
+
+    </main>
+
+    <script>
+
+        // Endereço da nossa API.
+        // Como frontend e backend estão no mesmo domínio,
+        // podemos utilizar um caminho relativo.
+        const API = "/api/tarefas";
+
+
+        // =====================================
+        // BUSCAR E EXIBIR TAREFAS
+        // =====================================
+
+        async function carregarTarefas() {
+
+            const mensagem = document.getElementById("mensagem");
+
+            mensagem.textContent = "Carregando tarefas...";
+
+            try {
+
+                // Faz uma requisição GET para o backend.
+                const resposta = await fetch(API);
+
+                if (!resposta.ok) {
+                    throw new Error("Erro ao buscar tarefas.");
+                }
+
+                // Converte a resposta JSON.
+                const tarefas = await resposta.json();
+
+                const lista = document.getElementById("listaTarefas");
+
+                // Limpa a lista anterior.
+                lista.innerHTML = "";
+
+                // Percorre todas as tarefas recebidas.
+                tarefas.forEach(tarefa => {
+
+                    const item = document.createElement("li");
+
+                    const texto = document.createElement("span");
+
+                    texto.className = "texto";
+                    texto.textContent = tarefa.nome;
+
+                    // Verifica se a tarefa está concluída.
+                    if (tarefa.concluida) {
+                        texto.classList.add("concluida");
+                    }
+
+                    // Botão para concluir ou desfazer.
+                    const concluir = document.createElement("button");
+
+                    concluir.className = "concluir";
+
+                    concluir.textContent = tarefa.concluida
+                        ? "Desfazer"
+                        : "Concluir";
+
+                    concluir.onclick = () => concluirTarefa(tarefa.id);
+
+                    // Botão para excluir.
+                    const excluir = document.createElement("button");
+
+                    excluir.className = "excluir";
+                    excluir.textContent = "Excluir";
+
+                    excluir.onclick = () => excluirTarefa(tarefa.id);
+
+                    // Coloca os elementos dentro da tarefa.
+                    item.append(texto, concluir, excluir);
+
+                    // Adiciona a tarefa à lista.
+                    lista.appendChild(item);
+
+                });
+
+                mensagem.textContent = tarefas.length === 0
+                    ? "Você ainda não possui tarefas."
+                    : "";
+
+            } catch (erro) {
+
+                mensagem.textContent = erro.message;
+
+            }
+
+        }
+
+
+        // =====================================
+        // ADICIONAR TAREFA
+        // =====================================
+
+        async function adicionarTarefa() {
+
+            const campo = document.getElementById("novaTarefa");
+
+            // Captura o texto digitado.
+            const nome = campo.value.trim();
+
+            if (!nome) {
+                alert("Digite uma tarefa!");
+                return;
+            }
+
+            try {
+
+                // Envia os dados utilizando POST.
+                const resposta = await fetch(API, {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    // Converte os dados para JSON.
+                    body: JSON.stringify({ nome })
+
+                });
+
+                if (!resposta.ok) {
+                    throw new Error("Erro ao cadastrar tarefa.");
+                }
+
+                // Limpa o campo.
+                campo.value = "";
+
+                // Atualiza a lista.
+                await carregarTarefas();
+
+            } catch (erro) {
+
+                alert(erro.message);
+
+            }
+
+        }
+
+
+        // =====================================
+        // CONCLUIR TAREFA
+        // =====================================
+
+        async function concluirTarefa(id) {
+
+            try {
+
+                // Envia PATCH para atualizar a tarefa.
+                const resposta = await fetch(`${API}/${id}`, {
+                    method: "PATCH"
+                });
+
+                if (!resposta.ok) {
+                    throw new Error("Erro ao atualizar tarefa.");
+                }
+
+                await carregarTarefas();
+
+            } catch (erro) {
+
+                alert(erro.message);
+
+            }
+
+        }
+
+
+        // =====================================
+        // EXCLUIR TAREFA
+        // =====================================
+
+        async function excluirTarefa(id) {
+
+            // Confirma a exclusão.
+            if (!confirm("Deseja excluir esta tarefa?")) {
+                return;
+            }
+
+            try {
+
+                // Envia DELETE para o backend.
+                const resposta = await fetch(`${API}/${id}`, {
+                    method: "DELETE"
+                });
+
+                if (!resposta.ok) {
+                    throw new Error("Erro ao excluir tarefa.");
+                }
+
+                await carregarTarefas();
+
+            } catch (erro) {
+
+                alert(erro.message);
+
+            }
+
+        }
+
+
+        // Carrega as tarefas quando a página abrir.
+        carregarTarefas();
+
+    </script>
+
+</body>
+</html>
